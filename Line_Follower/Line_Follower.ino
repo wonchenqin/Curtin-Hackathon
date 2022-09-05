@@ -1,12 +1,12 @@
 #include <Servo.h>
 
 // MOTOR PINS
-#define ENABLE1 9
-#define ENABLE2 10
-#define APIN    8
-#define BPIN    7
-#define CPIN    6
-#define DPIN    5
+#define ENABLE1 10
+#define ENABLE2 1
+#define APIN    9
+#define BPIN    8
+#define CPIN    7
+#define DPIN    6
 #define DEADZONE 0.1
 #define MAXSPEED 100 //from 0-255
 
@@ -51,20 +51,19 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  int state = 0;
-
+  int comm[4] = {0, 512, 512, 0};
+  readComm(comm);
+  int state = comm[0];
   switch (state) {
     case (1):
       teleop();
       break;
 
-      
     case (2):
-      autonomous();
+      autonomous(comm[1], comm[2], comm[3]);
       break;
 
   }
-
 
 
 }
@@ -77,13 +76,13 @@ void teleop() {
 
 void autonomous(int xval, int yval, int servo1 ) {
 
-  left = yval - xval;
-  right = yval + xval;
+  int left = yval - xval;
+  int right = yval + xval;
   left = map(left, 0, 1024, -1, 1);
   right = map(right, 0, 1024, -1, 1);
   motorDrive(left, right);
 
-  servo1 = map(servo1,0,1024,0,180);
+  servo1 = map(servo1, 0, 1024, 0, 180);
   arm(servo1);
 
 }
@@ -170,4 +169,9 @@ long ms_to_cm(long microseconds) {          // d = v * t
 
 void arm(int pos) {
   sam.write(pos);
+}
+
+
+void readComm(int (& buff) [4]) {
+
 }
