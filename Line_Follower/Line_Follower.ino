@@ -1,11 +1,14 @@
+#include <Servo.h>
+
 // MOTOR PINS
-#define ENABLE1 10
-#define ENABLE2 11
-#define APIN    9
-#define BPIN    8
-#define CPIN    7
-#define DPIN    6
+#define ENABLE1 9
+#define ENABLE2 10
+#define APIN    8
+#define BPIN    7
+#define CPIN    6
+#define DPIN    5
 #define DEADZONE 0.1
+#define MAXSPEED 100 //from 0-255
 
 // IR SENSOR PINS
 #define IR_LEFT     2
@@ -15,6 +18,10 @@
 // ULTRASONIC PINS
 #define ECHO_PIN        12
 #define TRIG_PIN        13
+
+// SERVO
+#define SERVO_PIN   1
+Servo sam;
 
 void setup() {
   Serial.begin(9600);
@@ -36,17 +43,52 @@ void setup() {
   pinMode(TRIG_PIN, OUTPUT);
   pinMode(ECHO_PIN, INPUT);
 
+  // SERVO SETUP
+  sam.attach(SERVO_PIN);
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-  readInfrared();
-  duration = get_pulse_duration();
-  cm = ms_to_cm(duration);
+  int state = 0;
+
+  switch (state) {
+    case (1):
+      teleop();
+      break;
+
+      
+    case (2):
+      autonomous();
+      break;
+
+  }
+
+
+
 }
 
-void readInfrared() {
+void teleop() {
+  colourFollowing();
+  //duration = get_pulse_duration();
+  //cm = ms_to_cm(duration);
+}
+
+void autonomous(int xval, int yval, int servo1 ) {
+
+  left = yval - xval;
+  right = yval + xval;
+  left = map(left, 0, 1024, -1, 1);
+  right = map(right, 0, 1024, -1, 1);
+  motorDrive(left, right);
+
+  servo1 = map(servo1,0,1024,0,180);
+  arm(servo1);
+
+}
+
+void colourFollowing() {
   bool left = digitalRead(IR_LEFT);
   bool mid = digitalRead(IR_MID);
   bool right = digitalRead(IR_RIGHT);
@@ -98,8 +140,8 @@ void motorDrive(float left, float right) {
     digitalWrite(DPIN, HIGH);
   }
 
-  L_speed = (int)100 * abs(left);
-  R_speed = (int)100 * abs(right);
+  L_speed = (int)MAXSPEED * abs(left);
+  R_speed = (int)MAXSPEED * abs(right);
 
 
   if (abs(left) < DEADZONE) {
@@ -113,15 +155,19 @@ void motorDrive(float left, float right) {
 }
 
 long get_pulse_duration() {                 // Sends a pulse from the trigger, and calculates how long it takes to return
-    digitalWrite(TRIG_PIN, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIG_PIN, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIG_PIN, LOW);
-    return pulseIn(ECHO_PIN, HIGH);
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  return pulseIn(ECHO_PIN, HIGH);
 }
 
 long ms_to_cm(long microseconds) {          // d = v * t
-    double speed_sound = 0.0343;            // in centimetres per microseconds
-    return microseconds * speed_sound / 2;  // divide by 2 to account for pulse travelling forward and backward
+  double speed_sound = 0.0343;            // in centimetres per microseconds
+  return microseconds * speed_sound / 2;  // divide by 2 to account for pulse travelling forward and backward
+}
+
+void arm(int pos) {
+  sam.write(pos);
 }
