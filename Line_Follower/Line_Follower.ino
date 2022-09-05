@@ -16,6 +16,8 @@
 #define ECHO_PIN        12
 #define TRIG_PIN        13
 
+int duration, cm;
+
 void setup() {
   Serial.begin(9600);
 
@@ -56,12 +58,12 @@ void readInfrared() {
     motorDrive(1, 1);
     //forward();
   } else if (!left && !mid && right) {                                // LLH (left corner)
-    motorDrive(-1, 0);
+    motorDrive(-1, 0.2);
   } else if (!left && mid && right) {                                 // LHH
     motorDrive(-1, 1);
     //right();
   } else if (left && !mid && !right) {                                // HLL (right corner)
-    motorDrive(0, -1);
+    motorDrive(0.2, -1);
   } else if (left && mid && !right) {                                 // HHL
     motorDrive(1, -1);
     //left();
