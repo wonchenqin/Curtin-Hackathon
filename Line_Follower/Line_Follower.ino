@@ -7,14 +7,19 @@
 #define DPIN    6
 #define DEADZONE 0.1
 
+// IR SENSOR PINS
+#define IR_LEFT     2
+#define IR_MID      3
+#define IR_RIGHT    4
 
-
-#define IR_LEFT     7
-#define IR_MID      6
-#define IR_RIGHT    5
+// ULTRASONIC PINS
+#define ECHO_PIN        12
+#define TRIG_PIN        13
 
 void setup() {
   Serial.begin(9600);
+
+  // IR SENSOR PINS
   pinMode(IR_LEFT, INPUT);
   pinMode(IR_MID, INPUT);
   pinMode(IR_RIGHT, INPUT);
@@ -27,14 +32,18 @@ void setup() {
   pinMode(CPIN, OUTPUT);
   pinMode(DPIN, OUTPUT);
 
+  // ULTRASONIC PINS
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-  for 
-  motorDrive(1,1);
-
+  readInfrared();
+  duration = get_pulse_duration();
+  cm = ms_to_cm(duration);
 }
 
 void readInfrared() {
@@ -43,19 +52,23 @@ void readInfrared() {
   bool right = digitalRead(IR_RIGHT);
 
 
-  if ((!left && !mid && !right) or (left && mid && right)) {            // LLL or HHH
+  if ((!left && !mid && !right) or (left && mid && right)) {          // LLL or HHH
     motorDrive(1, 1);
     //forward();
-  } else if ((!left && !mid && right) or (!left && mid && right)) {     // LLH or LHH
-    motorDrive(1, -1);
-    //right();
-  } else if ((left && !mid && !right) or (left && mid && !right)) {     // HLL or HHL
+  } else if (!left && !mid && right) {                                // LLH (left corner)
+    motorDrive(-1, 0);
+  } else if (!left && mid && right) {                                 // LHH
     motorDrive(-1, 1);
+    //right();
+  } else if (left && !mid && !right) {                                // HLL (right corner)
+    motorDrive(0, -1);
+  } else if (left && mid && !right) {                                 // HHL
+    motorDrive(1, -1);
     //left();
-  } else if (!left && mid && !right) {                                // LHL (desired)
+  } else if (!left && mid && !right) {                                // LHL (weird)
     motorDrive(1, 1);
     //forward();
-  } else if (left && !mid && right) {                                 // HLH (weird)
+  } else if (left && !mid && right) {                                 // HLH (desired)
     motorDrive(1, 1);
     //forward();
   }
@@ -70,9 +83,9 @@ void motorDrive(float left, float right) {
     digitalWrite(BPIN, LOW);
   }
   else // left < 0
-    {
-      digitalWrite(APIN, LOW);
-      digitalWrite(BPIN, HIGH);
+  {
+    digitalWrite(APIN, LOW);
+    digitalWrite(BPIN, HIGH);
   }
 
   if (right > 0) {
@@ -81,21 +94,34 @@ void motorDrive(float left, float right) {
   }
   else // right < 0
   {
-    digitalWrite(CPIN, HIGH);
-    digitalWrite(DPIN, LOW);
+    digitalWrite(CPIN, LOW);
+    digitalWrite(DPIN, HIGH);
   }
 
- L_speed = (int)255 * abs(left);
- R_speed = (int)255 * abs(right);
+  L_speed = (int)100 * abs(left);
+  R_speed = (int)100 * abs(right);
 
 
-if (abs(left) < DEADZONE) {
-  L_speed = 0;
+  if (abs(left) < DEADZONE) {
+    L_speed = 0;
+  }
+  if (abs(right) < DEADZONE) {
+    R_speed = 0;
+  }
+  analogWrite(ENABLE1, L_speed);
+  analogWrite(ENABLE2, R_speed);
 }
-if (abs(right) < DEADZONE) {
-  R_speed = 0;
-}
-analogWrite(ENABLE1, L_speed);
-analogWrite(ENABLE2, R_speed);
 
+long get_pulse_duration() {                 // Sends a pulse from the trigger, and calculates how long it takes to return
+    digitalWrite(TRIG_PIN, LOW);
+    delayMicroseconds(2);
+    digitalWrite(TRIG_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIG_PIN, LOW);
+    return pulseIn(ECHO_PIN, HIGH);
+}
+
+long ms_to_cm(long microseconds) {          // d = v * t
+    double speed_sound = 0.0343;            // in centimetres per microseconds
+    return microseconds * speed_sound / 2;  // divide by 2 to account for pulse travelling forward and backward
 }
