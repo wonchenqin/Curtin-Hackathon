@@ -1,0 +1,117 @@
+/*
+* Arduino Wireless Communication Tutorial
+*       Example 1 - Receiver Code
+*                
+* by Dejan Nedelkovski, www.HowToMechatronics.com
+* 
+* Library: TMRh20/RF24, https://github.com/tmrh20/RF24/
+*/
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+// #include <Servo.h>
+
+// motor driving code
+#define ENABLE1 10
+#define ENABLE2 6
+#define APIN    9
+#define BPIN    8
+#define CPIN    7
+#define DPIN    5
+#define DEADZONE 0.1
+#define MAXSPEED 100 //from 0-255
+
+// servo code
+/*
+#define SERVOPIN 3
+Servo myservo;*/
+
+RF24 radio(A4, A5); // CE, CSN
+
+uint8_t address[][6] = {"send", "reci"};
+
+int readval[5];
+// int readval;
+
+void setup() {
+  Serial.begin(9600);
+  radio.begin();
+  radio.openReadingPipe(1, address[1]);
+  radio.setPayloadSize(5 * sizeof(int));
+  radio.setPALevel(RF24_PA_LOW);
+  radio.startListening();
+  Serial.println("initialising receiver");
+
+  // MOTOR PINS
+  pinMode(ENABLE1, OUTPUT);
+  pinMode(ENABLE2, OUTPUT);
+  pinMode(APIN, OUTPUT);
+  pinMode(BPIN, OUTPUT);
+  pinMode(CPIN, OUTPUT);
+  pinMode(DPIN, OUTPUT);
+
+  // SERVO
+  // myservo.attach(SERVOPIN);
+}
+
+void loop() {
+  if (radio.available()) {
+  radio.read(&readval, 5 * sizeof(int));
+  Serial.print(readval[0]);
+  Serial.print(" ");
+  Serial.print(readval[1]);
+  Serial.print(" 
+  Serial.print(readval[2]);
+  Serial.print(" ");
+  Serial.print(readval[3]);
+  Serial.print("");
+  Serial.print(readval[4]);
+  Serial.println();
+  }
+  else {
+    // Serial.println("radio not available");
+  }
+
+  // drive car
+  float leftSpeed = (readval[1] - 512) / 512.0;
+  float rightSpeed = (readval[2] - 512) / 512.0;
+  motorDrive(rightSpeed, leftSpeed);
+
+  /* int servoAngle = map(readval[3], 0, 1023, 0, 180);
+  myservo.write(servoAngle); */
+  delay(20);
+}
+
+void motorDrive(float lSpd, float rSpd) {
+  // left motor
+  if (lSpd > DEADZONE) {
+    digitalWrite(APIN, HIGH);
+    digitalWrite(BPIN, LOW);
+  }
+  else if (lSpd < -DEADZONE) {
+    digitalWrite(APIN, LOW);
+    digitalWrite(BPIN, HIGH);
+  }
+  else {
+    digitalWrite(APIN, LOW);
+    digitalWrite(BPIN, LOW);
+  }
+
+  // right motor
+  if (rSpd > DEADZONE) {
+    digitalWrite(CPIN, HIGH);
+    digitalWrite(DPIN, LOW);
+  }
+  else if (rSpd < -DEADZONE) {
+    digitalWrite(CPIN, LOW);
+    digitalWrite(DPIN, HIGH);
+  }
+  else {
+    digitalWrite(CPIN, LOW);
+    digitalWrite(DPIN, LOW);
+  }
+
+  // lspeed, rspeed
+  analogWrite(ENABLE1, map(abs(lSpd) * 100, 0, 100, 0, 255));
+  analogWrite(ENABLE2, map(abs(rSpd) * 100, 0, 100, 0, 255));
+}
