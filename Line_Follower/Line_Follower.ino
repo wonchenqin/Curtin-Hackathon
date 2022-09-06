@@ -26,12 +26,14 @@ Servo sam;
 //LED CODE
 #define LEDPIN A0
 int LEDCODE[16] = {0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1};
+int ii;
+int counter;
 
 //RADIO CODE
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
-RF24 radio(A4,A5); // CE, CSN
+RF24 radio(A4, A5); // CE, CSN
 uint8_t address[][6] = {"send", "reci"};
 int readval;
 
@@ -60,6 +62,8 @@ void setup() {
 
   // LED CODE
   pinMode(LEDPIN, OUTPUT);
+  ii = -1;
+  counter = millis();
 
   // RADIO CODE
   Serial.begin(9600);
@@ -74,39 +78,23 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-  int comm[5] = {1, 512, 512, 0, 1};
-  //readComm(comm);
+  int comm[5] = {0, 512, 512, 0, 1};
+  readComm(comm);
   int state = comm[0];
   switch (state) {
     case (1):
-      //autonomous();
-      motorDrive(1,1);
-            sam.write(40);
+      autonomous();
       break;
 
     case (0):
-      teleop(comm[1], comm[2], comm[3]);// Xval,Yval,Servo,LEDbutton
+      teleop(comm[1], comm[2], comm[3], comm[4]);// Xval,Yval,Servo,LEDbutton
       break;
 
     default:
       sam.write(40);
       break;
   }
-/*
-
-    for (int ii = 0; ii < sizeof(LEDCODE)/sizeof(int); ii++)
-    {
-      if (LEDCODE[ii] == 1)
-      {
-        digitalWrite(LEDPIN, HIGH);
-      }
-      else
-      {
-        digitalWrite(LEDPIN, LOW);
-      }
-      delay(100);
-    }
-*/
+  ledCode();
 }
 
 void autonomous() {
@@ -114,10 +102,10 @@ void autonomous() {
   sam.write(40);
   //duration = get_pulse_duration();
   //cm = ms_to_cm(duration);
-  
+
 }
 
-void teleop(int xval, int yval, int servo1) {
+void teleop(int xval, int yval, int servo1, int ledButton) {
 
   int left = yval - xval;
   int right = yval + xval;
@@ -127,6 +115,12 @@ void teleop(int xval, int yval, int servo1) {
 
   servo1 = map(servo1, 0, 1024, 70, 150);
   sam.write(servo1);
+
+  if (ledButton == 1)
+  {
+    ii = 0;
+  }
+  
 }
 
 void colourFollowing() {
@@ -196,33 +190,58 @@ void motorDrive(float left, float right) {
 }
 
 void readComm(int (& buff) [4]) {
-    while (radio.available()== 0) {
-      Serial.println("waiting for comm");
-    }
-    Serial.println("receiving line:");
-    radio.read(&buff[0], sizeof(int));
-    radio.read(&buff[1], sizeof(int));
-    radio.read(&buff[2], sizeof(int));
-    radio.read(&buff[3], sizeof(int));
-    //radio.read(&buff[4], sizeof(int));
-    Serial.println(buff[0]);
+  while (radio.available() == 0) {
+    Serial.println("waiting for comm");
+  }
+  Serial.println("receiving line:");
+  radio.read(&buff[0], sizeof(int));
+  radio.read(&buff[1], sizeof(int));
+  radio.read(&buff[2], sizeof(int));
+  radio.read(&buff[3], sizeof(int));
+  radio.read(&buff[4], sizeof(int));
+  Serial.println(buff[0]);
 
   delay(20);
 }
 
+void ledCode() {
+
+  if (ii < 16 && ii >= 0) {
+    if (LEDCODE[ii] == 1)
+    {
+      digitalWrite(LEDPIN, HIGH);
+    }
+    else
+    {
+      digitalWrite(LEDPIN, LOW);
+    }
+    if (millis() > counter + 100)
+    {
+      ii = ii + 1;
+      //ii = 11%16;
+      counter = millis();
+    }
+  }
+  else
+  {
+    ii = -1;
+  }
+}
+}
+
 
 /*
-long get_pulse_duration() {                 // Sends a pulse from the trigger, and calculates how long it takes to return
+  long get_pulse_duration() {                 // Sends a pulse from the trigger, and calculates how long it takes to return
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
   return pulseIn(ECHO_PIN, HIGH);
-}
+  }
 
-long ms_to_cm(long microseconds) {          // d = v * t
+  long ms_to_cm(long microseconds) {          // d = v * t
   double speed_sound = 0.0343;            // in centimetres per microseconds
   return microseconds * speed_sound / 2;  // divide by 2 to account for pulse travelling forward and backward
-}
+  }
 */
