@@ -1,3 +1,14 @@
+// transmitter code
+// sends a 5-integer array of data for each channel of freedom on the transmitter.
+// array is as follows:
+// { buttonstate1, vrx, vry, potentiometer, buttonstate2 }
+// array[0] -> line follow button
+// array[1] -> joystick x-axis
+// array[2] -> joystick y-axis
+// array[3] -> potentiometer
+// array[4] -> lightshow actuator button
+
+
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
