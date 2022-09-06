@@ -10,17 +10,18 @@
 #include <nRF24L01.h>
 #include <RF24.h>
 
-RF24 radio(7,8); // CE, CSN
+RF24 radio(A4, A5); // CE, CSN
 
 uint8_t address[][6] = {"send", "reci"};
 
-int readval;
+int readval[5];
+// int readval;
 
 void setup() {
   Serial.begin(9600);
   radio.begin();
   radio.openReadingPipe(1, address[1]);
-  radio.setPayloadSize(sizeof(int));
+  radio.setPayloadSize(5 * sizeof(int));
   radio.setPALevel(RF24_PA_LOW);
   radio.startListening();
   Serial.println("initialising receiver");
@@ -28,9 +29,17 @@ void setup() {
 
 void loop() {
   if (radio.available()) {
-    Serial.println("receiving line:");
-    radio.read(&readval, sizeof(int));
-    Serial.println(readval);
+  radio.read(&readval, 5 * sizeof(int));
+  Serial.print(readval[0]);
+  Serial.print(" ");
+  Serial.print(readval[1]);
+  Serial.print(" ");
+  Serial.print(readval[2]);
+  Serial.print(" ");
+  Serial.print(readval[3]);
+  Serial.print(" ");
+  Serial.print(readval[4]);
+  Serial.println();
   }
   else {
     // Serial.println("radio not available");
