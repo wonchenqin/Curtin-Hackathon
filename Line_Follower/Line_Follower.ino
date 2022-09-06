@@ -7,8 +7,8 @@
 #define BPIN    8
 #define CPIN    7
 #define DPIN    5
-#define DEADZONE 0.1
-#define MAXSPEED 100 //from 0-255
+#define DEADZONE 0.4
+#define MAXSPEED 255 //from 0-255
 
 // IR SENSOR PINS
 #define IR_LEFT     2
@@ -26,8 +26,10 @@ Servo sam;
 //LED CODE
 #define LEDPIN A0
 int LEDCODE[16] = {0, 1, 0, 1, 1, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1};
-int ii;
+long int ii;
 int counter;
+int toggle = 1;
+int on = 0;
 
 //RADIO CODE
 #include <SPI.h>
@@ -61,45 +63,48 @@ void setup() {
   sam.attach(SERVO_PIN);
 
   // LED CODE
-  pinMode(LEDPIN, OUTPUT);
-  ii = -1;
-  counter = millis();
+
 
   // RADIO CODE
   Serial.begin(9600);
   radio.begin();
   radio.openReadingPipe(1, address[1]);
-  radio.setPayloadSize(sizeof(int));
+  radio.setPayloadSize(5 * sizeof(int));
   radio.setPALevel(RF24_PA_LOW);
   radio.startListening();
   Serial.println("initialising receiver");
+  
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
 
-  int comm[5] = {0, 512, 512, 0, 1};
+  int comm[5] = {0, 512, 512, 0, 0};
   readComm(comm);
   int state = comm[0];
   switch (state) {
-    case (1):
+    case (0):
       autonomous();
+      //motorDrive(1,1);
+
       break;
 
-    case (0):
+    case (1):
       teleop(comm[1], comm[2], comm[3], comm[4]);// Xval,Yval,Servo,LEDbutton
       break;
 
     default:
-      sam.write(40);
       break;
   }
+
+  //digitalWrite(LEDPIN, HIGH);
+  //sam.write(0);
   ledCode();
 }
 
 void autonomous() {
   colourFollowing();
-  sam.write(40);
+  sam.write(0);
   //duration = get_pulse_duration();
   //cm = ms_to_cm(duration);
 
@@ -107,19 +112,21 @@ void autonomous() {
 
 void teleop(int xval, int yval, int servo1, int ledButton) {
 
-  int left = yval - xval;
-  int right = yval + xval;
-  left = map(left, 0, 1024, -1, 1);
-  right = map(right, 0, 1024, -1, 1);
+
+  int left = map(xval, 0, -1, 1024, 1);
+  int right = map(yval, 0, -1, 1024, 1);
   motorDrive(left, right);
 
-  servo1 = map(servo1, 0, 1024, 70, 150);
+  servo1 = map(servo1, 0, 1024,0,60);
+  Serial.println(servo1);
   sam.write(servo1);
 
   if (ledButton == 1)
   {
-    ii = 0;
+    on = 1;
+    Serial.println("change led");
   }
+  
   
 }
 
@@ -190,20 +197,24 @@ void motorDrive(float left, float right) {
 }
 
 void readComm(int (& buff) [5]) {
-  while (radio.available() >0) {
- 
+  while (!radio.available()) {
+     Serial.println("waiting:");
+  } 
   Serial.println("receiving line:");
   radio.read(&buff,5*sizeof(int));
   Serial.println(buff[0]);
- 
+  Serial.println(buff[1]);
+  Serial.println(buff[2]);
+  Serial.println(buff[3]);
+  Serial.println(buff[4]);
   delay(20);
-  }
+  
 }
 
 void ledCode() {
 
-  if (ii < 16 && ii >= 0) {
-    if (LEDCODE[ii] == 1)
+
+    if (LEDCODE[ii%16] == 1)
     {
       digitalWrite(LEDPIN, HIGH);
     }
@@ -211,17 +222,16 @@ void ledCode() {
     {
       digitalWrite(LEDPIN, LOW);
     }
-    if (millis() > counter + 100)
+    if (millis() > counter + 60)
     {
       ii = ii + 1;
-      //ii = 11%16;
       counter = millis();
     }
-  }
-  else
-  {
-    ii = -1;
-  }
+
+    if(ii >= 10000){
+      ii =0;
+    }
+
 }
 
 
