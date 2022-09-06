@@ -189,19 +189,15 @@ void motorDrive(float left, float right) {
   analogWrite(ENABLE2, R_speed);
 }
 
-void readComm(int (& buff) [4]) {
-  while (radio.available() == 0) {
-    Serial.println("waiting for comm");
-  }
+void readComm(int (& buff) [5]) {
+  while (radio.available() >0) {
+ 
   Serial.println("receiving line:");
-  radio.read(&buff[0], sizeof(int));
-  radio.read(&buff[1], sizeof(int));
-  radio.read(&buff[2], sizeof(int));
-  radio.read(&buff[3], sizeof(int));
-  radio.read(&buff[4], sizeof(int));
+  radio.read(&buff,5*sizeof(int));
   Serial.println(buff[0]);
-
+ 
   delay(20);
+  }
 }
 
 void ledCode() {
@@ -227,7 +223,7 @@ void ledCode() {
     ii = -1;
   }
 }
-}
+
 
 
 /*
